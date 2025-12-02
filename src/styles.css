@@ -1,0 +1,108 @@
+:root {
+  --bg: #0b0f14;
+  --card: #121a22;
+  --text: #e9f0f5;
+  --muted: #b6c2cc;
+  --accent: #1f8ef1;
+  --accent-700: #0f6ec3;
+  --error: #ff4d4f;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, Apple Color Emoji, Segoe UI Emoji;
+  background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+  color: var(--text);
+}
+
+.container {
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.logo {
+  width: 96px;
+  height: auto;
+  display: block;
+  margin: 0 auto 16px;
+  filter: drop-shadow(0 6px 18px rgba(0,0,0,0.35));
+}
+
+.title {
+  text-align: center;
+  margin-bottom: 12px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.subtitle {
+  text-align: center;
+  margin-bottom: 14px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.card {
+  width: 100%;
+  max-width: 520px;
+  background: #ffffff;
+  color: #0b0f14;
+  border: 1px solid rgba(0,0,0,0.06);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+  display: grid;
+  gap: 10px;
+}
+
+.label {
+  font-size: 13px;
+  color: #425466;
+}
+
+.input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(0,0,0,0.12);
+  background: #ffffff;
+  color: #0b0f14;
+  outline: none;
+}
+.input:focus { border-color: rgba(31,142,241,0.6); box-shadow: 0 0 0 4px rgba(31,142,241,0.12); }
+
+.button {
+  margin-top: 6px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: none;
+  background: var(--accent);
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+.button:disabled { opacity: 0.6; cursor: not-allowed; }
+.button:hover:not(:disabled) { background: var(--accent-700); }
+
+.result, .error {
+  margin: 8px 0 0;
+  white-space: pre-wrap;
+  background: #f7f9fb;
+  border: 1px solid rgba(0,0,0,0.06);
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 13px;
+}
+.error { border-color: rgba(255,77,79,0.5); color: var(--error); background: #fff5f5; }
+
+.note {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #425466;
+}
+
+
