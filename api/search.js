@@ -7,8 +7,7 @@ export default async function handler(req, res) {
   }
   try {
     const cloudRunUrl = process.env.CLOUD_RUN_URL;
-    // Vercel OIDC token (must be provided by Vercel or injected as an env var)
-    const vercelOidc = process.env.VERCEL_IDENTITY_TOKEN;
+    const vercelApiToken = process.env.VERCEL_TOKEN; // Personal/token for OIDC client_credentials
     // WIF details (allow overrides via env)
     const projectNumber = process.env.GCP_PROJECT_NUMBER || '406054563942';
     const workloadPool = process.env.WIF_POOL_ID || 'vercel-pool';
@@ -20,15 +19,43 @@ export default async function handler(req, res) {
     if (!cloudRunUrl) {
       return res.status(500).json({ error: true, message: 'Missing CLOUD_RUN_URL' });
     }
-    if (!vercelOidc) {
+    if (!vercelApiToken) {
       return res.status(500).json({
         error: true,
-        message:
-          'Missing VERCEL_IDENTITY_TOKEN. Ensure Vercel OIDC token is available to this function.',
+        message: 'Missing VERCEL_TOKEN. Add a Vercel API token to generate OIDC.',
       });
     }
 
     const stsAudience = `//iam.googleapis.com/projects/${projectNumber}/locations/global/workloadIdentityPools/${workloadPool}/providers/${providerId}`;
+
+    // 0) Obtain Vercel OIDC token via client_credentials
+    const oidcResp = await fetch('https://api.vercel.com/v2/oidc/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${vercelApiToken}`,
+      },
+      body: JSON.stringify({
+        audience: 'vercel',
+        grant_type: 'client_credentials',
+      }),
+    });
+    const oidcBody = await oidcResp.json().catch(() => ({}));
+    if (!oidcResp.ok) {
+      return res.status(oidcResp.status).json({
+        error: true,
+        step: 'vercel_oidc',
+        details: oidcBody,
+      });
+    }
+    const vercelOidc = oidcBody.id_token || oidcBody.idToken || oidcBody.idTokenJwt;
+    if (!vercelOidc) {
+      return res.status(500).json({
+        error: true,
+        message: 'No id_token returned from Vercel OIDC endpoint',
+        details: oidcBody,
+      });
+    }
 
     // 1) Exchange Vercel OIDC for Google STS access token
     const stsResp = await fetch('https://sts.googleapis.com/v1/token', {
