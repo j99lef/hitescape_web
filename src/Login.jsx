@@ -15,25 +15,26 @@ export default function Login({ onSuccess }) {
     if (attempt === real) {
       sessionStorage.setItem('auth', 'ok');
       try {
-        // Log outcome and key values for verification
-        console.log('login-success', {
+        const payload = {
           sessionAuth: sessionStorage.getItem('auth'),
           typeOfEnv: typeof import.meta.env.VITE_SITE_PASSWORD,
           real: JSON.stringify(real),
           attempt: JSON.stringify(attempt),
           equal: attempt === real
-        });
+        };
+        console.log('login-success', JSON.stringify(payload));
       } catch {}
       if (typeof onSuccess === 'function') onSuccess();
     } else {
       try {
-        console.log('login-fail', {
+        const payload = {
           sessionAuth: sessionStorage.getItem('auth'),
           typeOfEnv: typeof import.meta.env.VITE_SITE_PASSWORD,
           real: JSON.stringify(real),
           attempt: JSON.stringify(attempt),
           equal: attempt === real
-        });
+        };
+        console.log('login-fail', JSON.stringify(payload));
       } catch {}
       setError('Incorrect password.');
     }
