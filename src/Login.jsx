@@ -6,16 +6,35 @@ export default function Login({ onSuccess }) {
 
   function handleSubmit(e) {
     e.preventDefault();
-    const required = import.meta.env.VITE_SITE_PASSWORD || '';
-    if (!required) {
+    const real = (import.meta.env.VITE_SITE_PASSWORD || '').trim();
+    const attempt = password.trim();
+    if (!real) {
       setError('Site password not configured. Set VITE_SITE_PASSWORD in .env');
       return;
     }
-    if (password === required) {
+    if (attempt === real) {
       sessionStorage.setItem('auth', 'ok');
-      setError('');
+      try {
+        // Log outcome and key values for verification
+        console.log('login-success', {
+          sessionAuth: sessionStorage.getItem('auth'),
+          typeOfEnv: typeof import.meta.env.VITE_SITE_PASSWORD,
+          real: JSON.stringify(real),
+          attempt: JSON.stringify(attempt),
+          equal: attempt === real
+        });
+      } catch {}
       if (typeof onSuccess === 'function') onSuccess();
     } else {
+      try {
+        console.log('login-fail', {
+          sessionAuth: sessionStorage.getItem('auth'),
+          typeOfEnv: typeof import.meta.env.VITE_SITE_PASSWORD,
+          real: JSON.stringify(real),
+          attempt: JSON.stringify(attempt),
+          equal: attempt === real
+        });
+      } catch {}
       setError('Incorrect password.');
     }
   }
