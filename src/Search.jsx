@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { getAuthHeader } from './auth.js';
-
-const API_URL = 'https://hitescape-agent-ws2qitn7ea-nw.a.run.app/search';
+// Calls are proxied server-side on Vercel to avoid CORS and IAM issues.
+const API_URL = '/api/search';
 
 export default function Search() {
   const [origin, setOrigin] = useState('');
@@ -29,12 +28,10 @@ export default function Search() {
         console.log('VITE_DEV_ID_TOKEN present:', Boolean(import.meta.env.VITE_DEV_ID_TOKEN));
       }
       // Require dev identity token
-      const authHeader = getAuthHeader();
       const resp = await fetch(API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...authHeader
         },
         body: JSON.stringify({ origin, destination, departDate, returnDate })
       });
