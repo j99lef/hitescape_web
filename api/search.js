@@ -6,116 +6,22 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method Not allowed' });
   }
   try {
-    const cloudRunUrl = process.env.CLOUD_RUN_URL;
-    const vercelApiToken = process.env.VERCEL_TOKEN; // Personal/token for OIDC client_credentials
-    // WIF details (allow overrides via env)
-    const projectNumber = process.env.GCP_PROJECT_NUMBER || '406054563942';
-    const workloadPool = process.env.WIF_POOL_ID || 'vercel-pool';
-    const providerId = process.env.WIF_PROVIDER_ID || 'vercel-provider';
-    const serviceAccountEmail =
-      process.env.SA_EMAIL ||
-      'hitescape-vercel-invoker@phoenix-479815.iam.gserviceaccount.com';
-
-    if (!cloudRunUrl) {
-      return res.status(500).json({ error: true, message: 'Missing CLOUD_RUN_URL' });
+    const brokerUrl = process.env.BACKEND_BROKER_URL;
+    const cloudRunUrl = process.env.BACKEND_URL || process.env.CLOUD_RUN_URL;
+    if (!brokerUrl || !cloudRunUrl) {
+      return res.status(500).json({ error: true, message: 'Missing BACKEND_BROKER_URL or BACKEND_URL' });
     }
-    if (!vercelApiToken) {
-      return res.status(500).json({
-        error: true,
-        message: 'Missing VERCEL_TOKEN. Add a Vercel API token to generate OIDC.',
-      });
+    // 1) Get ID token from broker
+    const tokenResp = await fetch(`${brokerUrl.replace(/\/+$/, '')}/token`, { method: 'POST' });
+    const tokenJson = await tokenResp.json().catch(() => ({}));
+    if (!tokenResp.ok || !tokenJson.token) {
+      return res.status(tokenResp.status || 500).json({ error: true, step: 'broker', details: tokenJson });
     }
-
-    const stsAudience = `//iam.googleapis.com/projects/${projectNumber}/locations/global/workloadIdentityPools/${workloadPool}/providers/${providerId}`;
-
-    // 0) Obtain Vercel OIDC token via client_credentials
-    const oidcResp = await fetch('https://api.vercel.com/v2/oidc/token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${vercelApiToken}`,
-      },
-      body: JSON.stringify({
-        audience: 'vercel',
-        grant_type: 'client_credentials',
-      }),
-    });
-    const oidcBody = await oidcResp.json().catch(() => ({}));
-    if (!oidcResp.ok) {
-      return res.status(oidcResp.status).json({
-        error: true,
-        step: 'vercel_oidc',
-        details: oidcBody,
-      });
-    }
-    const vercelOidc = oidcBody.id_token || oidcBody.idToken || oidcBody.idTokenJwt;
-    if (!vercelOidc) {
-      return res.status(500).json({
-        error: true,
-        message: 'No id_token returned from Vercel OIDC endpoint',
-        details: oidcBody,
-      });
-    }
-
-    // 1) Exchange Vercel OIDC for Google STS access token
-    const stsResp = await fetch('https://sts.googleapis.com/v1/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        grant_type: 'urn:ietf:params:oauth:grant-type:token-exchange',
-        subject_token_type: 'urn:ietf:params:oauth:token-type:id_token',
-        subject_token: vercelOidc,
-        audience: stsAudience,
-      }),
-    });
-    const stsBody = await stsResp.json().catch(() => ({}));
-    if (!stsResp.ok) {
-      return res.status(stsResp.status).json({
-        error: true,
-        step: 'sts',
-        details: stsBody,
-      });
-    }
-    const accessToken = stsBody.access_token;
-    if (!accessToken) {
-      return res.status(500).json({ error: true, message: 'No access_token from STS' });
-    }
-
-    // 2) Use access token to generate an ID token for Cloud Run audience
-    const iamUrl = `https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/${encodeURIComponent(
-      serviceAccountEmail
-    )}:generateIdToken`;
-    const idTokenResp = await fetch(iamUrl, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        audience: cloudRunUrl,
-        includeEmail: true,
-      }),
-    });
-    const idTokenBody = await idTokenResp.json().catch(() => ({}));
-    if (!idTokenResp.ok) {
-      return res.status(idTokenResp.status).json({
-        error: true,
-        step: 'generateIdToken',
-        details: idTokenBody,
-      });
-    }
-    const idToken = idTokenBody.token;
-    if (!idToken) {
-      return res.status(500).json({ error: true, message: 'No idToken from IAM Credentials' });
-    }
-
-    // 3) Call Cloud Run with the freshly minted ID token
+    const idToken = tokenJson.token;
+    // 2) Call backend Cloud Run
     const upstream = await fetch(`${cloudRunUrl.replace(/\/+$/, '')}/search`, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${idToken}`,
-        'Content-Type': 'application/json',
-      },
+      headers: { Authorization: `Bearer ${idToken}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(req.body || {}),
     });
     const text = await upstream.text();
