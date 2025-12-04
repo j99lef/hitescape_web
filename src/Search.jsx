@@ -18,6 +18,10 @@ export default function Search() {
     setResult(null);
     setLoading(true);
     try {
+      // Ensure user is authenticated via password gate before any API call
+      if (sessionStorage.getItem('auth') !== 'ok') {
+        throw new Error('Please log in first to use search.');
+      }
       if (import.meta.env.DEV) {
         // Log presence only (not the token value) to verify env injection in dev
         // Remove/ignore in production (guarded by DEV).
